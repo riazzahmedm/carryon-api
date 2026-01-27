@@ -66,6 +66,15 @@ model Delivery {
   @@index([tripId])
 }
 
+model DeliveryCategory {
+  id        String   @id
+  label     String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([isActive])
+}
+
 model Payment {
   id          String        @id @default(uuid())
   deliveryId  String        @unique

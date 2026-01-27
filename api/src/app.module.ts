@@ -9,9 +9,10 @@ import { DeliveriesModule } from './deliveries/deliveries.module';
 import { RiskModule } from './risk/risk.module';
 import { PricingModule } from './pricing/pricing.module';
 import { PaymentsModule } from './payments/payments.module';
+import { DeliveryCategoriesModule } from './delivery-categories/delivery-categories.module';
 
 @Module({
-  imports: [PrismaModule, UsersModule, AuthModule, TripsModule, DeliveriesModule, RiskModule, PricingModule, PaymentsModule],
+  imports: [PrismaModule, UsersModule, AuthModule, TripsModule, DeliveriesModule, RiskModule, PricingModule, PaymentsModule, DeliveryCategoriesModule],
   controllers: [AppController],
   providers: [AppService],
 })
