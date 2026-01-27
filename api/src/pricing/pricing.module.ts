@@ -6,6 +6,7 @@ import { RiskModule } from 'src/risk/risk.module';
 @Module({
   imports: [RiskModule],
   controllers: [PricingController],
-  providers: [PricingService]
+  providers: [PricingService],
+  exports: [PricingService]
 })
 export class PricingModule {}
