@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String      @id @default(uuid())
+  phone        String      @unique
+  email        String?     @unique
+  fullName     String?
+  role         UserRole    @default(USER)
+  status       UserStatus  @default(PENDING)
+  profileDone  Boolean     @default(false)
+  otpCode      String?
+  otpExpiresAt DateTime?
+  createdAt    DateTime    @default(now())
+  deliveries   Delivery[]  @relation("SenderDeliveries")
+  kycProfile   KycProfile?
+  trips        Trip[]
+
+  @@index([phone])
+}
+
+model KycProfile {
+  id        String    @id @default(uuid())
+  userId    String    @unique
+  status    KycStatus
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+}
+
+model Trip {
+  id         String     @id @default(uuid())
+  userId     String
+  fromCity   String
+  toCity     String
+  flightDate DateTime
+  capacityKg Float
+  isActive   Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  deliveries Delivery[]
+  user       User       @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Delivery {
+  id            String         @id @default(uuid())
+  senderId      String
+  tripId        String?
+  itemName      String
+  itemCategory  String
+  weightKg      Float
+  declaredValue Int
+  status        DeliveryStatus @default(CREATED)
+  createdAt     DateTime       @default(now())
+  sender        User           @relation("SenderDeliveries", fields: [senderId], references: [id])
+  trip          Trip?          @relation(fields: [tripId], references: [id])
+  payment       Payment?
+
+  @@index([senderId])
+  @@index([tripId])
+}
+
+model Payment {
+  id          String        @id @default(uuid())
+  deliveryId  String        @unique
+  amount      Int
+  platformFee Int
+  status      PaymentStatus @default(INITIATED)
+  provider    String
+  providerRef String?
+  createdAt   DateTime      @default(now())
+
+  delivery Delivery @relation(fields: [deliveryId], references: [id])
+
+  @@index([deliveryId])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum KycStatus {
+  PENDING
+  VERIFIED
+  FAILED
+}
+
+enum DeliveryStatus {
+  CREATED
+  MATCHED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  CLOSED
+}
+
+enum PaymentStatus {
+  INITIATED
+  AUTHORIZED
+  CAPTURED
+  RELEASED
+  REFUNDED
+}
