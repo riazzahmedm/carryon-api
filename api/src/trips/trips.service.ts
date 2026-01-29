@@ -1,10 +1,42 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateTripDto } from "./dto/create-trip.dto";
+import { PricingService } from "src/pricing/pricing.service";
+
+type DeliveryStatus = {
+  status: string;
+};
 
 @Injectable()
 export class TripsService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private pricingService: PricingService,
+  ) { }
+
+  private computeTripStatus(deliveries: DeliveryStatus[]) {
+    if (!deliveries || deliveries.length === 0) {
+      return "AVAILABLE";
+    }
+
+    if (deliveries.some(d => d.status === "PICKED_UP")) {
+      return "IN_TRANSIT";
+    }
+
+    if (deliveries.some(d => d.status === "APPROVED" || d.status === "MATCHED")) {
+      return "MATCHED";
+    }
+
+    if (
+      deliveries.every(
+        d => d.status === "DELIVERED" || d.status === "CLOSED"
+      )
+    ) {
+      return "COMPLETED";
+    }
+    return "AVAILABLE";
+  }
+
 
   createTrip(userId: string, dto: CreateTripDto) {
     return this.prisma.trip.create({
@@ -18,12 +50,48 @@ export class TripsService {
     });
   }
 
-  getMyTrips(userId: string) {
-    return this.prisma.trip.findMany({
+  async getMyTrips(userId: string) {
+    const trips = await this.prisma.trip.findMany({
       where: { userId, isActive: true },
+      include: {
+        deliveries: {
+          include: {
+            sender: {
+              select: {
+                id: true,
+                fullName: true
+              },
+            },
+          },
+        },
+      },
       orderBy: { flightDate: "asc" },
     });
+
+
+    const enrichedTrips = await Promise.all(
+      trips.map(async (trip) => {
+        const deliveriesWithEarning = await Promise.all(
+          trip.deliveries.map(async (delivery) => ({
+            ...delivery,
+            travellerEarning: await this.pricingService.travellerEarning(
+              delivery.id,
+              trip.id,
+            ),
+          }))
+        );
+
+        return {
+          ...trip,
+          deliveries: deliveriesWithEarning,
+          tripStatus: this.computeTripStatus(deliveriesWithEarning),
+        };
+      })
+    );
+
+    return enrichedTrips;
   }
+
 
   searchTrips(
     currentUserId: string,

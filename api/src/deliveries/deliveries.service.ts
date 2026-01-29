@@ -67,8 +67,51 @@ export class DeliveriesService {
     });
   }
 
+  async approve(deliveryId: string, travellerId: string) {
+    const delivery = await this.prisma.delivery.findUnique({
+      where: { id: deliveryId },
+      include: { trip: true },
+    });
+
+    if (!delivery || delivery.status !== "MATCHED") {
+      throw new BadRequestException("Invalid delivery state");
+    }
+
+    if (delivery?.trip?.userId !== travellerId) {
+      throw new BadRequestException("Not authorized");
+    }
+
+    return this.prisma.delivery.update({
+      where: { id: deliveryId },
+      data: { status: "APPROVED" },
+    });
+  }
+
+  async reject(deliveryId: string, travellerId: string) {
+    const delivery = await this.prisma.delivery.findUnique({
+      where: { id: deliveryId },
+      include: { trip: true },
+    });
+
+    if (!delivery || delivery.status !== "MATCHED") {
+      throw new BadRequestException("Invalid delivery state");
+    }
+
+    if (delivery?.trip?.userId !== travellerId) {
+      throw new BadRequestException("Not authorized");
+    }
+
+    return this.prisma.delivery.update({
+      where: { id: deliveryId },
+      data: {
+        status: "REJECTED",
+        tripId: null,
+      },
+    });
+  }
+
   async pickup(deliveryId: string) {
-    return this.updateStatus(deliveryId, "MATCHED", "PICKED_UP");
+    return this.updateStatus(deliveryId, "APPROVED", "PICKED_UP");
   }
 
   async confirm(deliveryId: string) {

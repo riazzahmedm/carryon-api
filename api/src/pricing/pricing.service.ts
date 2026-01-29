@@ -59,8 +59,10 @@ export class PricingService {
     if (risk.decision === "HIGH") price *= 1.5;
 
     // --- Platform fee ---
-    const platformFee = price * 0.1;
+    const platformFee = Math.round(price * 0.1);
     const finalPrice = Math.round(price + platformFee);
+
+    const travellerEarning = Math.round(price);
 
     return {
       base: BASE_PRICE,
@@ -68,6 +70,45 @@ export class PricingService {
       risk: risk.decision,
       platformFee: Math.round(platformFee),
       total: finalPrice,
+      travellerEarning,
     };
+  }
+
+  async travellerEarning(deliveryId: string, tripId: string) {
+    const delivery = await this.prisma.delivery.findUnique({
+      where: { id: deliveryId },
+    });
+
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+    });
+
+    if (!delivery || !trip) return null;
+
+    // --- base calc (same as quote) ---
+    const BASE_PRICE = 200;
+    const COST_PER_KG = 100;
+
+    let price = BASE_PRICE + delivery.weightKg * COST_PER_KG;
+
+    const routeKey = `${trip.fromCity}-${trip.toCity}`;
+    const distanceMultiplier =
+      routeKey === "HYD-BLR" ? 1.1 :
+      routeKey === "BLR-HYD" ? 1.2 :
+      routeKey === "HYD-CHN" ? 1.5 :
+      routeKey === "CHN-HYD" ? 1.6 :
+      1.0;
+
+    price *= distanceMultiplier;
+
+    const hoursToFlight =
+      (trip.flightDate.getTime() - Date.now()) / (1000 * 60 * 60);
+
+    if (hoursToFlight < 12) price *= 1.6;
+    else if (hoursToFlight < 24) price *= 1.3;
+    else if (hoursToFlight < 48) price *= 1.1;
+
+    // 👇 Traveller earns BEFORE platform fee
+    return Math.round(price);
   }
 }

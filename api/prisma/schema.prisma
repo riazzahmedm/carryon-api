@@ -114,6 +114,8 @@ enum KycStatus {
 enum DeliveryStatus {
   CREATED
   MATCHED
+  APPROVED
+  REJECTED
   PICKED_UP
   IN_TRANSIT
   DELIVERED

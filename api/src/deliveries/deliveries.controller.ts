@@ -11,7 +11,7 @@ import { MatchDeliveryDto } from "./dto/match-delivery.dto";
 @UseGuards(JwtAuthGuard)
 @Controller("deliveries")
 export class DeliveriesController {
-  constructor(private deliveries: DeliveriesService) {}
+  constructor(private deliveries: DeliveriesService) { }
 
   @Post()
   @ApiOperation({ summary: "Create delivery (Sender flow)" })
@@ -35,6 +35,24 @@ export class DeliveriesController {
     @Body() dto: MatchDeliveryDto,
   ) {
     return this.deliveries.matchDelivery(id, dto.tripId);
+  }
+
+  @Post(":id/approve")
+  @ApiOperation({ summary: "Traveller approves delivery" })
+  approve(
+    @CurrentUser() user: any,
+    @Param("id") id: string,
+  ) {
+    return this.deliveries.approve(id, user.userId);
+  }
+
+  @Post(":id/reject")
+  @ApiOperation({ summary: "Traveller rejects delivery" })
+  reject(
+    @CurrentUser() user: any,
+    @Param("id") id: string,
+  ) {
+    return this.deliveries.reject(id, user.userId);
   }
 
   @Post(":id/pickup")
