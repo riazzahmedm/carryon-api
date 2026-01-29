@@ -6,7 +6,7 @@ export class CreateTripDto {
   @IsString()
   fromCity: string;
 
-  @ApiProperty({ example: "CHN" })
+  @ApiProperty({ example: "MAA" })
   @IsString()
   toCity: string;
 

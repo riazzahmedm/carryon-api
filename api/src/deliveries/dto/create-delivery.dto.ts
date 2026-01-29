@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsInt, IsNumber, IsString, Min } from "class-validator";
+import { IsDateString, IsInt, IsNumber, IsString, Min } from "class-validator";
 
 export class CreateDeliveryDto {
   @ApiProperty({ example: "Documents" })
@@ -19,4 +19,16 @@ export class CreateDeliveryDto {
   @IsInt()
   @Min(1)
   declaredValue: number;
+
+  @ApiProperty({ example: "HYD" })
+  @IsString()
+  fromCity: string;
+
+  @ApiProperty({ example: "BLR" })
+  @IsString()
+  toCity: string;
+
+  @ApiProperty({ example: "2026-01-01" })
+  @IsDateString()
+  travelDate: string;
 }

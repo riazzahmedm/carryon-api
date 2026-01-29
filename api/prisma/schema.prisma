@@ -56,6 +56,9 @@ model Delivery {
   itemCategory  String
   weightKg      Float
   declaredValue Int
+  fromCity      String
+  toCity        String
+  travelDate    DateTime
   status        DeliveryStatus @default(CREATED)
   createdAt     DateTime       @default(now())
   sender        User           @relation("SenderDeliveries", fields: [senderId], references: [id])
@@ -64,6 +67,7 @@ model Delivery {
 
   @@index([senderId])
   @@index([tripId])
+  @@index([fromCity, toCity, travelDate])
 }
 
 model DeliveryCategory {

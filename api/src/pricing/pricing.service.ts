@@ -40,8 +40,8 @@ export class PricingService {
     const distanceMultiplier =
       routeKey === "HYD-BLR" ? 1.1 :
       routeKey === "BLR-HYD" ? 1.2 :
-      routeKey === "HYD-CHN" ? 1.5 :
-      routeKey === "CHN-HYD" ? 1.6 :
+      routeKey === "HYD-MAA" ? 1.5 :
+      routeKey === "MAA-HYD" ? 1.6 :
       1.0;
 
     price *= distanceMultiplier;

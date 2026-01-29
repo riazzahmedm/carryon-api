@@ -31,14 +31,14 @@ export class TripsController {
   @ApiOperation({ summary: "Search available trips (Sender flow)" })
   search(
     @CurrentUser() user: any,
-    @Query("from") from: string,
-    @Query("to") to: string,
+    @Query("fromCity") fromCity: string,
+    @Query("toCity") toCity: string,
     @Query("date") date: string,
   ) {
     return this.tripsService.searchTrips(
       user.userId,
-      from,
-      to,
+      fromCity,
+      toCity,
       date,
     );
   }

@@ -15,6 +15,9 @@ export class DeliveriesService {
         itemCategory: dto.itemCategory,
         weightKg: dto.weightKg,
         declaredValue: dto.declaredValue,
+        fromCity: dto.fromCity,
+        toCity: dto.toCity,
+        travelDate: new Date(dto.travelDate),
       },
     });
   }
@@ -63,7 +66,6 @@ export class DeliveriesService {
       },
     });
   }
-
 
   async pickup(deliveryId: string) {
     return this.updateStatus(deliveryId, "MATCHED", "PICKED_UP");
