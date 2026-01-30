@@ -92,7 +92,6 @@ export class TripsService {
     return enrichedTrips;
   }
 
-
   searchTrips(
     currentUserId: string,
     fromCity: string,
@@ -127,6 +126,49 @@ export class TripsService {
       },
       orderBy: { flightDate: "asc" },
     });
+  }
+
+  async getTravellerEarningSummary(travellerId: string) {
+    const deliveries = await this.prisma.delivery.findMany({
+      where: {
+        trip: {
+          userId: travellerId,
+        },
+        travellerEarning: {
+          not: null,
+        },
+        status: {
+          in: [
+            "APPROVED",
+            "PICKED_UP",
+            "IN_TRANSIT",
+            "DELIVERED"
+          ],
+        },
+      },
+      select: {
+        status: true,
+        travellerEarning: true,
+      },
+    });
+
+    let pending = 0;
+    let completed = 0;
+
+    for (const d of deliveries) {
+      if (!d.travellerEarning) continue;
+
+      if (["DELIVERED"].includes(d.status)) {
+        completed += d.travellerEarning;
+      } else {
+        pending += d.travellerEarning;
+      }
+    }
+    
+    return {
+      pending,
+      completed,
+    };
   }
 
 }

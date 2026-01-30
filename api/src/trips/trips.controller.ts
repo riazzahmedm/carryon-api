@@ -42,4 +42,11 @@ export class TripsController {
       date,
     );
   }
+
+  @Get("earnings/summary")
+  @ApiOperation({ summary: "Get traveller earning summary" })
+  getTravellerEarnings(@CurrentUser() user: any) {
+    return this.tripsService.getTravellerEarningSummary(user.userId);
+  }
+
 }
