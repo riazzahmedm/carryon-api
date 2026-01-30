@@ -2,10 +2,11 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateDeliveryDto } from "./dto/create-delivery.dto";
 import { RiskService } from "src/risk/risk.service";
+import { PricingService } from "src/pricing/pricing.service";
 
 @Injectable()
 export class DeliveriesService {
-  constructor(private prisma: PrismaService, private riskService: RiskService) { }
+  constructor(private prisma: PrismaService, private riskService: RiskService, private pricingService: PricingService) { }
 
   create(senderId: string, dto: CreateDeliveryDto) {
     return this.prisma.delivery.create({
@@ -77,13 +78,31 @@ export class DeliveriesService {
       throw new BadRequestException("Invalid delivery state");
     }
 
+    if (!delivery.trip) {
+      throw new BadRequestException("Delivery is not assigned to a trip");
+    }
+
     if (delivery?.trip?.userId !== travellerId) {
       throw new BadRequestException("Not authorized");
     }
 
+    if (delivery.agreedPrice) {
+      throw new BadRequestException("Delivery already approved");
+    }
+
+    const pricing = await this.pricingService.quote(
+      deliveryId,
+      delivery.tripId!,
+    );
+
     return this.prisma.delivery.update({
       where: { id: deliveryId },
-      data: { status: "APPROVED" },
+      data: {
+        status: "APPROVED",
+        agreedPrice: pricing.total,
+        travellerEarning: pricing.travellerEarning,
+        platformFee: pricing.platformFee,
+      },
     });
   }
 

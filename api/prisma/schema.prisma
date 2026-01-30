@@ -59,6 +59,11 @@ model Delivery {
   fromCity      String
   toCity        String
   travelDate    DateTime
+
+  agreedPrice        Int?
+  travellerEarning   Int?
+  platformFee        Int?
+  
   status        DeliveryStatus @default(CREATED)
   createdAt     DateTime       @default(now())
   sender        User           @relation("SenderDeliveries", fields: [senderId], references: [id])
