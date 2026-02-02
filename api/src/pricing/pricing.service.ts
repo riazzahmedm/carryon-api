@@ -7,7 +7,7 @@ export class PricingService {
   constructor(
     private prisma: PrismaService,
     private riskService: RiskService,
-  ) {}
+  ) { }
 
   async quote(deliveryId: string, tripId: string) {
     const delivery = await this.prisma.delivery.findUnique({
@@ -22,55 +22,78 @@ export class PricingService {
       throw new BadRequestException("Invalid delivery or trip");
     }
 
-    // --- Risk check ---
     const risk = await this.riskService.evaluate(deliveryId, tripId);
 
     if (risk.decision === "BLOCK") {
       throw new BadRequestException("Pricing blocked due to high risk");
     }
 
-    // --- Base calculation ---
+    // ---------- BASE ----------
     const BASE_PRICE = 200;
     const COST_PER_KG = 100;
 
-    let price = BASE_PRICE + delivery.weightKg * COST_PER_KG;
+    const base = BASE_PRICE;
+    const weightCost = delivery.weightKg * COST_PER_KG;
+    const baseSubtotal = base + weightCost;
 
-    // --- Distance multiplier ---
+    // ---------- DISTANCE ----------
     const routeKey = `${trip.fromCity}-${trip.toCity}`;
     const distanceMultiplier =
       routeKey === "HYD-BLR" ? 1.1 :
-      routeKey === "BLR-HYD" ? 1.2 :
-      routeKey === "HYD-MAA" ? 1.5 :
-      routeKey === "MAA-HYD" ? 1.6 :
-      1.0;
+        routeKey === "BLR-HYD" ? 1.2 :
+          routeKey === "HYD-MAA" ? 1.5 :
+            routeKey === "MAA-HYD" ? 1.6 :
+              1.0;
 
-    price *= distanceMultiplier;
+    const distanceFee = Math.round(
+      baseSubtotal * (distanceMultiplier - 1)
+    );
 
-    // --- Urgency multiplier ---
-    const hoursToFlight =
-      (trip.flightDate.getTime() - Date.now()) / (1000 * 60 * 60);
+    const afterDistance = baseSubtotal + distanceFee;
 
-    if (hoursToFlight < 12) price *= 1.6;
-    else if (hoursToFlight < 24) price *= 1.3;
-    else if (hoursToFlight < 48) price *= 1.1;
+    // ---------- URGENCY ----------
+    const daysToFlight = Math.ceil(
+      (trip.flightDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    );
 
-    // --- Risk multiplier ---
-    if (risk.decision === "REVIEW") price *= 1.2;
-    if (risk.decision === "HIGH") price *= 1.5;
+    let urgencyMultiplier = 1;
+    if (daysToFlight <= 1) urgencyMultiplier = 1.6;
+    else if (daysToFlight === 2) urgencyMultiplier = 1.3;
+    else if (daysToFlight <= 4) urgencyMultiplier = 1.1;
 
-    // --- Platform fee ---
-    const platformFee = Math.round(price * 0.1);
-    const finalPrice = Math.round(price + platformFee);
+    const urgencyFee = Math.round(
+      afterDistance * (urgencyMultiplier - 1)
+    );
 
-    const travellerEarning = Math.round(price);
+    const afterUrgency = afterDistance + urgencyFee;
+
+    // ---------- RISK ----------
+    let riskMultiplier = 1;
+    if (risk.decision === "REVIEW") riskMultiplier = 1.2;
+    if (risk.decision === "HIGH") riskMultiplier = 1.5;
+
+    const riskFee = Math.round(
+      afterUrgency * (riskMultiplier - 1)
+    );
+
+    const travellerEarning = afterUrgency + riskFee;
+
+    // ---------- PLATFORM ----------
+    const platformFee = Math.round(travellerEarning * 0.1);
+    const total = travellerEarning + platformFee;
 
     return {
-      base: BASE_PRICE,
-      weightCost: delivery.weightKg * COST_PER_KG,
+      breakdown: {
+        base,
+        weightCost,
+        distanceFee,
+        urgencyFee,
+        riskFee,
+      },
       risk: risk.decision,
-      platformFee: Math.round(platformFee),
-      total: finalPrice,
       travellerEarning,
+      platformFee,
+      total,
     };
   }
 
@@ -94,10 +117,10 @@ export class PricingService {
     const routeKey = `${trip.fromCity}-${trip.toCity}`;
     const distanceMultiplier =
       routeKey === "HYD-BLR" ? 1.1 :
-      routeKey === "BLR-HYD" ? 1.2 :
-      routeKey === "HYD-CHN" ? 1.5 :
-      routeKey === "CHN-HYD" ? 1.6 :
-      1.0;
+        routeKey === "BLR-HYD" ? 1.2 :
+          routeKey === "HYD-CHN" ? 1.5 :
+            routeKey === "CHN-HYD" ? 1.6 :
+              1.0;
 
     price *= distanceMultiplier;
 
