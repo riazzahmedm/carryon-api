@@ -3,7 +3,7 @@ import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   findById(userId: string) {
     return this.prisma.user.findUnique({
@@ -52,10 +52,37 @@ export class UsersService {
     });
   }
 
-  updateProfile(userId: string, data: Partial<{ fullName: string; email: string }>) {
+  async updateProfile(
+    userId: string,
+    data: Partial<{ fullName: string; email: string }>
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new BadRequestException("User not found");
+    }
+
+    const fullName = data.fullName ?? user.fullName;
+    const email = data.email ?? user.email;
+
+    const profileDone = Boolean(fullName && email);
+
     return this.prisma.user.update({
       where: { id: userId },
-      data,
+      data: {
+        ...data,
+        profileDone,
+      },
+      select: {
+        id: true,
+        phone: true,
+        fullName: true,
+        email: true,
+        profileDone: true,
+      },
     });
   }
+
 }
