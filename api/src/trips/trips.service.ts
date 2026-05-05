@@ -72,13 +72,12 @@ export class TripsService {
     const enrichedTrips = await Promise.all(
       trips.map(async (trip) => {
         const deliveriesWithEarning = await Promise.all(
-          trip.deliveries.map(async (delivery) => ({
-            ...delivery,
-            travellerEarning: await this.pricingService.travellerEarning(
-              delivery.id,
-              trip.id,
-            ),
-          }))
+          trip.deliveries.map(async (delivery) => {
+            const earning = delivery.travellerEarning !== null
+              ? delivery.travellerEarning
+              : await this.pricingService.travellerEarning(delivery.id, trip.id);
+            return { ...delivery, travellerEarning: earning };
+          })
         );
 
         return {

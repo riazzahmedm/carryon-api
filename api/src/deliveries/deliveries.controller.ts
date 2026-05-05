@@ -31,10 +31,11 @@ export class DeliveriesController {
   @Post(":id/match")
   @ApiOperation({ summary: "Match delivery to a trip" })
   match(
+    @CurrentUser() user: any,
     @Param("id") id: string,
     @Body() dto: MatchDeliveryDto,
   ) {
-    return this.deliveries.matchDelivery(id, dto.tripId);
+    return this.deliveries.matchDelivery(user.userId, id, dto.tripId);
   }
 
   @Post(":id/approve")

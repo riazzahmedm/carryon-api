@@ -30,7 +30,7 @@ export class DeliveriesService {
     });
   }
 
-  async matchDelivery(deliveryId: string, tripId: string) {
+  async matchDelivery(senderId: string, deliveryId: string, tripId: string) {
     const delivery = await this.prisma.delivery.findUnique({
       where: { id: deliveryId },
     });
@@ -39,14 +39,12 @@ export class DeliveriesService {
       where: { id: tripId },
     });
 
-    const risk = await this.riskService.evaluate(deliveryId, tripId);
-
-    if (risk.decision === "BLOCK") {
-      throw new BadRequestException("Match blocked by risk engine");
-    }
-
     if (!delivery || !trip) {
       throw new BadRequestException("Invalid delivery or trip");
+    }
+
+    if (delivery.senderId !== senderId) {
+      throw new BadRequestException("Not authorized");
     }
 
     if (delivery.senderId === trip.userId) {
@@ -57,6 +55,12 @@ export class DeliveriesService {
 
     if (delivery.status !== "CREATED") {
       throw new BadRequestException("Delivery not matchable");
+    }
+
+    const risk = await this.riskService.evaluate(deliveryId, tripId);
+
+    if (risk.decision === "BLOCK") {
+      throw new BadRequestException("Match blocked by risk engine");
     }
 
     return this.prisma.delivery.update({

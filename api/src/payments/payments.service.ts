@@ -1,32 +1,28 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { PricingService } from "../pricing/pricing.service";
 
 @Injectable()
 export class PaymentsService {
-  constructor(
-    private prisma: PrismaService,
-    private pricing: PricingService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   async initiate(deliveryId: string, tripId: string) {
     const delivery = await this.prisma.delivery.findUnique({
       where: { id: deliveryId },
     });
 
-    if (!delivery || delivery.status !== "MATCHED") {
+    if (!delivery || delivery.status !== "APPROVED") {
       throw new BadRequestException("Delivery not ready for payment");
     }
 
-    // --- Get price quote ---
-    const quote = await this.pricing.quote(deliveryId, tripId);
+    if (!delivery.agreedPrice || !delivery.platformFee) {
+      throw new BadRequestException("Delivery pricing not finalised");
+    }
 
-    // --- Create escrow payment ---
     return this.prisma.payment.create({
       data: {
         deliveryId,
-        amount: quote.total,
-        platformFee: quote.platformFee,
+        amount: delivery.agreedPrice,
+        platformFee: delivery.platformFee,
         provider: "MOCK",
         status: "AUTHORIZED",
       },

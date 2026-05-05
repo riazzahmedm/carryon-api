@@ -108,30 +108,35 @@ export class PricingService {
 
     if (!delivery || !trip) return null;
 
-    // --- base calc (same as quote) ---
     const BASE_PRICE = 200;
     const COST_PER_KG = 100;
 
-    let price = BASE_PRICE + delivery.weightKg * COST_PER_KG;
+    const base = BASE_PRICE;
+    const weightCost = delivery.weightKg * COST_PER_KG;
+    const baseSubtotal = base + weightCost;
 
     const routeKey = `${trip.fromCity}-${trip.toCity}`;
     const distanceMultiplier =
       routeKey === "HYD-BLR" ? 1.1 :
-        routeKey === "BLR-HYD" ? 1.2 :
-          routeKey === "HYD-CHN" ? 1.5 :
-            routeKey === "CHN-HYD" ? 1.6 :
-              1.0;
+      routeKey === "BLR-HYD" ? 1.2 :
+      routeKey === "HYD-MAA" ? 1.5 :
+      routeKey === "MAA-HYD" ? 1.6 :
+      1.0;
 
-    price *= distanceMultiplier;
+    const distanceFee = Math.round(baseSubtotal * (distanceMultiplier - 1));
+    const afterDistance = baseSubtotal + distanceFee;
 
-    const hoursToFlight =
-      (trip.flightDate.getTime() - Date.now()) / (1000 * 60 * 60);
+    const daysToFlight = Math.ceil(
+      (trip.flightDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    );
 
-    if (hoursToFlight < 12) price *= 1.6;
-    else if (hoursToFlight < 24) price *= 1.3;
-    else if (hoursToFlight < 48) price *= 1.1;
+    let urgencyMultiplier = 1;
+    if (daysToFlight <= 1) urgencyMultiplier = 1.6;
+    else if (daysToFlight === 2) urgencyMultiplier = 1.3;
+    else if (daysToFlight <= 4) urgencyMultiplier = 1.1;
 
-    // 👇 Traveller earns BEFORE platform fee
-    return Math.round(price);
+    const urgencyFee = Math.round(afterDistance * (urgencyMultiplier - 1));
+
+    return afterDistance + urgencyFee;
   }
 }
